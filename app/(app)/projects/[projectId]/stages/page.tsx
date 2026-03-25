@@ -439,9 +439,8 @@ export default function StagesPage({ params }: { params: { projectId: string } }
                     type="date"
                     defaultValue={activeStage.start_date ?? ''}
                     key={`start-${activeStage.id}`}
-                    disabled={role !== 'admin'}
                     onBlur={e => updateStage(activeStage.id, 'start_date', e.target.value || null)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-50 disabled:text-gray-400"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                   />
                 </div>
                 <div>
@@ -456,10 +455,9 @@ export default function StagesPage({ params }: { params: { projectId: string } }
                     type="date"
                     defaultValue={activeStage.end_date ?? ''}
                     key={`end-${activeStage.id}`}
-                    disabled={role !== 'admin'}
                     onBlur={e => updateStage(activeStage.id, 'end_date', e.target.value || null)}
                     className={cn(
-                      'w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-50 disabled:text-gray-400',
+                      'w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300',
                       activeStage.end_date && new Date(activeStage.end_date) < new Date() && activeStage.status !== 'completed'
                         ? 'border-red-300 bg-red-50'
                         : 'border-gray-200'
