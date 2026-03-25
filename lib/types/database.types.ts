@@ -63,6 +63,8 @@ export interface Task {
   created_at: string
 }
 
+export type ContractorStatus = 'active' | 'completed' | 'paused'
+
 export interface Contractor {
   id: string
   project_id: string
@@ -72,6 +74,15 @@ export interface Contractor {
   email?: string
   notes?: string
   rating?: number
+  status?: ContractorStatus
+  progress_pct?: number
+  quote_amount?: number
+  advance_amount?: number
+  actual_amount?: number
+  start_date?: string
+  planned_end_date?: string
+  actual_end_date?: string
+  contract_url?: string
   created_at: string
 }
 
@@ -123,6 +134,7 @@ export interface Quote {
 
 export interface AppUser {
   id: string
+  email?: string
   full_name?: string
   phone?: string
   role: UserRole

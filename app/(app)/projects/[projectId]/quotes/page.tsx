@@ -72,6 +72,7 @@ export default function QuotesPage({ params }: { params: { projectId: string } }
   const [editingStatus, setEditingStatus] = useState<string | null>(null)
   const [contractorModal, setContractorModal] = useState<{ quote: Quote; phone: string; advance_pct: string } | null>(null)
   const [creatingContractor, setCreatingContractor] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     load()
@@ -221,9 +222,9 @@ export default function QuotesPage({ params }: { params: { projectId: string } }
   }
 
   async function deleteQuote(quoteId: string) {
-    if (!confirm('למחוק את הצעת המחיר?')) return
     const prev = quotes
     setQuotes(q => q.filter(x => x.id !== quoteId))
+    setDeleteConfirmId(null)
     const { error } = await supabase.from('quotes').delete().eq('id', quoteId)
     if (error) {
       setQuotes(prev)
@@ -653,7 +654,7 @@ export default function QuotesPage({ params }: { params: { projectId: string } }
 
                     <div className="flex justify-end">
                       <button
-                        onClick={() => deleteQuote(quote.id)}
+                        onClick={() => setDeleteConfirmId(quote.id)}
                         className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors"
                       >
                         <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>delete</span>
@@ -665,6 +666,33 @@ export default function QuotesPage({ params }: { params: { projectId: string } }
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-right">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="material-symbols-rounded text-red-500" style={{ fontSize: '1.4rem' }}>delete_forever</span>
+              <p className="font-semibold text-gray-800">מחיקת הצעת מחיר</p>
+            </div>
+            <p className="text-gray-500 text-sm mb-5">האם למחוק את הצעת המחיר? פעולה זו לא ניתנת לביטול.</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                בטל
+              </button>
+              <button
+                onClick={() => deleteQuote(deleteConfirmId)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                מחק
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

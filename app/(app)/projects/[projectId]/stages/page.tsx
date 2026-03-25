@@ -114,17 +114,21 @@ export default function StagesPage({ params }: { params: { projectId: string } }
   }
 
   async function updateTask(taskId: string, field: string, value: unknown) {
-    // Optimistic update
-    setStages(prev => prev.map(s => ({
-      ...s,
-      tasks: s.tasks.map(t => t.id === taskId ? { ...t, [field]: value } : t),
-    })))
+    // Save previous value for rollback
+    let prevValue: unknown = undefined
+    setStages(prev => {
+      prev.forEach(s => s.tasks?.forEach(t => { if (t.id === taskId) prevValue = (t as any)[field] }))
+      return prev.map(s => ({
+        ...s,
+        tasks: s.tasks.map(t => t.id === taskId ? { ...t, [field]: value } : t),
+      }))
+    })
     const { error } = await supabase.from('tasks').update({ [field]: value }).eq('id', taskId)
     if (error) {
-      // Rollback
+      // Rollback to previous value
       setStages(prev => prev.map(s => ({
         ...s,
-        tasks: s.tasks.map(t => t.id === taskId ? { ...t, [field]: undefined } : t),
+        tasks: s.tasks.map(t => t.id === taskId ? { ...t, [field]: prevValue } : t),
       })))
       toast.error('שגיאה בעדכון המשימה')
     }

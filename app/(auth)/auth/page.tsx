@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { setDevRole } from '@/lib/hooks/useAuth'
 import { toast } from 'sonner'
@@ -62,6 +63,7 @@ function BrandPanel() {
 
 // ─── Login form ───────────────────────────────────────────────────────────────
 function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLogin, setIsLogin] = useState(true)
@@ -76,7 +78,7 @@ function LoginPage() {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        window.location.href = '/dashboard'
+        router.push('/dashboard')
       } else {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error

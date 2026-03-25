@@ -80,6 +80,7 @@ export default function DocumentsPage({ params }: { params: { projectId: string 
   const [docName,   setDocName]   = useState('')
   const [file,      setFile]      = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<Doc | null>(null)
 
   useEffect(() => { load() }, [projectId])
 
@@ -138,10 +139,10 @@ export default function DocumentsPage({ params }: { params: { projectId: string 
   }
 
   async function handleDelete(doc: Doc) {
-    if (!confirm(`למחוק את "${doc.name}"?`)) return
     const { error } = await supabase.from('documents').delete().eq('id', doc.id)
     if (error) { toast.error('שגיאה במחיקה'); return }
     setDocs(prev => prev.filter(d => d.id !== doc.id))
+    setDeleteConfirmDoc(null)
     toast.success('המסמך נמחק')
   }
 
@@ -319,7 +320,7 @@ export default function DocumentsPage({ params }: { params: { projectId: string 
                     title="הורד">
                     <span className="material-symbols-rounded text-gray-400" style={{ fontSize: '1rem' }}>download</span>
                   </a>
-                  <button onClick={() => handleDelete(doc)}
+                  <button onClick={() => setDeleteConfirmDoc(doc)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors"
                     title="מחק">
                     <span className="material-symbols-rounded text-gray-300 hover:text-red-400" style={{ fontSize: '1rem' }}>delete</span>
@@ -380,7 +381,7 @@ export default function DocumentsPage({ params }: { params: { projectId: string 
                       <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>download</span>
                       הורד
                     </a>
-                    <button onClick={() => handleDelete(doc)}
+                    <button onClick={() => setDeleteConfirmDoc(doc)}
                       className="p-1 rounded-lg hover:bg-red-50 transition-colors">
                       <span className="material-symbols-rounded text-gray-300 hover:text-red-400" style={{ fontSize: '0.85rem' }}>delete</span>
                     </button>
@@ -515,6 +516,34 @@ export default function DocumentsPage({ params }: { params: { projectId: string 
                 </button>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-right">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="material-symbols-rounded text-red-500" style={{ fontSize: '1.4rem' }}>delete_forever</span>
+              <p className="font-semibold text-gray-800">מחיקת מסמך</p>
+            </div>
+            <p className="text-gray-500 text-sm mb-1">האם למחוק את:</p>
+            <p className="font-medium text-gray-700 text-sm mb-5">"{deleteConfirmDoc.name}"?</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirmDoc(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                בטל
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmDoc)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                מחק
+              </button>
             </div>
           </div>
         </div>
