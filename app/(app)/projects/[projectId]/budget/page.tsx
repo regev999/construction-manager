@@ -267,7 +267,7 @@ export default function BudgetPage({ params }: { params: { projectId: string } }
                       </span>
                       {diff !== 0 && planned > 0 && (
                         <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', diff > 0 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600')}>
-                          {diff > 0 ? `+${formatNIS(diff)} חריגה` : `חסכון: ${formatNIS(Math.abs(diff))}`}
+                          {diff > 0 ? `+${formatNIS(diff)} חריגה` : `תקציב פנוי: ${formatNIS(Math.abs(diff))}`}
                         </span>
                       )}
                     </div>
