@@ -31,6 +31,7 @@ export default function StagesPage({ params }: { params: { projectId: string } }
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
   const [project, setProject] = useState<any>(null)
   const [pricesByPhase, setPricesByPhase] = useState<Record<string, { min: number; max: number }>>({})
+  const [viewMode, setViewMode] = useState<'list' | 'gantt'>('list')
 
   const supabase = createClient()
 
@@ -187,6 +188,20 @@ export default function StagesPage({ params }: { params: { projectId: string } }
     </div>
   )
 
+  // Gantt calculations
+  const stagesWithDates = stages.filter(s => s.start_date && s.end_date)
+  const ganttDates = stagesWithDates.flatMap(s => [new Date(s.start_date!), new Date(s.end_date!)])
+  const ganttStart = ganttDates.length > 0 ? new Date(Math.min(...ganttDates.map(d => d.getTime()))) : new Date()
+  const ganttEnd   = ganttDates.length > 0 ? new Date(Math.max(...ganttDates.map(d => d.getTime()))) : new Date()
+  const ganttTotalDays = Math.max(1, Math.ceil((ganttEnd.getTime() - ganttStart.getTime()) / 86400000))
+
+  const STATUS_GANTT_COLOR: Record<string, string> = {
+    pending: 'bg-gray-300',
+    in_progress: 'bg-indigo-500',
+    completed: 'bg-emerald-500',
+    on_hold: 'bg-amber-400',
+  }
+
   return (
     <div className="space-y-5 animate-fade-in">
 
@@ -206,8 +221,133 @@ export default function StagesPage({ params }: { params: { projectId: string } }
         </div>
       )}
 
+      {/* ── View Toggle ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+          <button
+            onClick={() => setViewMode('list')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
+              viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>list</span>
+            רשימה
+          </button>
+          <button
+            onClick={() => setViewMode('gantt')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
+              viewMode === 'gantt' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>view_timeline</span>
+            לוח זמנים
+          </button>
+        </div>
+      </div>
+
+      {/* ── Gantt View ── */}
+      {viewMode === 'gantt' && (
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100" dir="rtl">
+          <h3 className="text-sm font-bold text-gray-700 mb-4">לוח זמנים ויזואלי</h3>
+
+          {stagesWithDates.length === 0 ? (
+            <div className="text-center py-10">
+              <span className="material-symbols-rounded text-gray-300 block mb-2" style={{ fontSize: '2.5rem' }}>calendar_month</span>
+              <p className="text-sm text-gray-400 font-medium">אין תאריכים מוגדרים לשלבים</p>
+              <p className="text-xs text-gray-300 mt-1">הגדר תאריכי התחלה וסיום לשלבים כדי לראות את לוח הזמנים</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Month labels */}
+              <div className="mr-36 flex justify-between text-[10px] text-gray-400 font-medium mb-1">
+                <span>{ganttStart.toLocaleDateString('he-IL', { month: 'short', year: '2-digit' })}</span>
+                <span>{ganttEnd.toLocaleDateString('he-IL', { month: 'short', year: '2-digit' })}</span>
+              </div>
+
+              {stages.map(stage => {
+                const hasDates = stage.start_date && stage.end_date
+                const barLeft = hasDates
+                  ? (new Date(stage.start_date!).getTime() - ganttStart.getTime()) / 86400000 / ganttTotalDays * 100
+                  : 0
+                const barWidth = hasDates
+                  ? Math.max(2, (new Date(stage.end_date!).getTime() - new Date(stage.start_date!).getTime()) / 86400000 / ganttTotalDays * 100)
+                  : 0
+                const pct = stage.tasks.length > 0
+                  ? Math.round(stage.tasks.filter(t => t.is_completed).length / stage.tasks.length * 100)
+                  : 0
+
+                return (
+                  <div key={stage.id} className="flex items-center gap-3">
+                    {/* Stage name */}
+                    <div className="w-32 flex-shrink-0 text-right">
+                      <p className="text-xs font-semibold text-gray-700 truncate">{stage.name}</p>
+                      <p className="text-[10px] text-gray-400">{pct}%</p>
+                    </div>
+
+                    {/* Bar track */}
+                    <div className="flex-1 h-7 bg-gray-100 rounded-lg relative overflow-hidden">
+                      {hasDates ? (
+                        <div
+                          className={cn('absolute top-0 h-full rounded-lg transition-all', STATUS_GANTT_COLOR[stage.status] ?? 'bg-gray-300')}
+                          style={{ right: `${barLeft}%`, width: `${barWidth}%` }}
+                        >
+                          {/* Progress fill */}
+                          <div
+                            className="absolute top-0 right-0 h-full rounded-lg opacity-40 bg-white"
+                            style={{ width: `${100 - pct}%` }}
+                          />
+                          {barWidth > 15 && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white font-bold">
+                              {stage.start_date ? new Date(stage.start_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' }) : ''}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[10px] text-gray-400">לא תוזמן</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status badge */}
+                    <div className="w-12 flex-shrink-0">
+                      <span className={cn(
+                        'text-[9px] font-bold px-1.5 py-0.5 rounded-full',
+                        stage.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                        stage.status === 'in_progress' ? 'bg-indigo-100 text-indigo-700' :
+                        stage.status === 'on_hold' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-500'
+                      )}>
+                        {STATUS_LABELS[stage.status]}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-gray-100">
+                {[
+                  { color: 'bg-emerald-500', label: 'הושלם' },
+                  { color: 'bg-indigo-500', label: 'בתהליך' },
+                  { color: 'bg-amber-400', label: 'מושהה' },
+                  { color: 'bg-gray-300', label: 'טרם החל' },
+                ].map(l => (
+                  <div key={l.label} className="flex items-center gap-1.5">
+                    <div className={cn('w-3 h-3 rounded-sm', l.color)} />
+                    <span className="text-[10px] text-gray-500">{l.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Construction Timeline ── */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      {viewMode === 'list' && <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-5">
           <span className="text-xs font-bold tracking-widest text-gray-400 uppercase">ציר זמן הבנייה</span>
           <span className="text-xs font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
@@ -257,10 +397,10 @@ export default function StagesPage({ params }: { params: { projectId: string } }
             )
           })}
         </div>
-      </div>
+      </div>}
 
       {/* ── Main Content ── */}
-      {activeStage && (
+      {viewMode === 'list' && activeStage && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
           {/* Left: Tasks */}

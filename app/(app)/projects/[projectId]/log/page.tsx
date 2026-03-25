@@ -91,6 +91,7 @@ export default function LogPage({ params }: { params: { projectId: string } }) {
   const [filterType, setFilterType]   = useState('all')
   const [filterStage, setFilterStage] = useState('all')
   const [issuesOnly, setIssuesOnly]   = useState(false)
+  const [search, setSearch]           = useState('')
 
   useEffect(() => { load() }, [projectId])
 
@@ -143,6 +144,10 @@ export default function LogPage({ params }: { params: { projectId: string } }) {
     if (filterType !== 'all' && log.type !== filterType) return false
     if (filterStage !== 'all' && log.stage_id !== filterStage) return false
     if (issuesOnly && log.status === 'normal' && log.type !== 'issue') return false
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      if (!log.title.toLowerCase().includes(q) && !log.description?.toLowerCase().includes(q)) return false
+    }
     return true
   })
 
@@ -180,6 +185,26 @@ export default function LogPage({ params }: { params: { projectId: string } }) {
           <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>add</span>
           + הוסף עדכון
         </button>
+      </div>
+
+      {/* ── Search bar ── */}
+      <div className="relative">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-rounded text-gray-400" style={{ fontSize: '1.1rem' }}>search</span>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="חיפוש ביומן..."
+          className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 text-right"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: '1rem' }}>close</span>
+          </button>
+        )}
       </div>
 
       {/* ── Filter bar ── */}

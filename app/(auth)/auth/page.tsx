@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
-import { setDevRole } from '@/lib/hooks/useAuth'
 import { toast } from 'sonner'
 
 const PRIMARY = '#002045'
