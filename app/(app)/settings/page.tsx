@@ -14,6 +14,7 @@ interface Project {
   total_budget: number | null
   location_type: string | null
   build_type: string | null
+  construction_type: string | null
   start_date: string | null
   target_end_date: string | null
   notes: string | null
@@ -35,6 +36,11 @@ const BUILD_TYPES = [
   { value: 'turnkey', label: 'מפתח בידיים',  icon: 'key',          desc: 'קבלן ראשי אחראי על הכל' },
 ]
 
+const CONSTRUCTION_TYPES = [
+  { value: 'concrete', label: 'בנייה רגילה', icon: 'foundation',    desc: 'בטון ובלוקים — הסטנדרט הנפוץ', color: 'text-slate-600' },
+  { value: 'light',    label: 'בנייה קלה',   icon: 'home_storage',  desc: 'פלדה / עץ / מודולרי — עלות נמוכה יותר', color: 'text-emerald-600' },
+]
+
 function extractPlotSize(notes: string | null): string {
   if (!notes) return ''
   const match = notes.match(/שטח מגרש: (\d+(?:\.\d+)?) מ"ר/)
@@ -53,7 +59,7 @@ export default function SettingsPage() {
   // Project
   const [project, setProject] = useState<Project | null>(null)
   const [projectForm, setProjectForm] = useState({
-    name: '', address: '', location_type: '', build_type: '',
+    name: '', address: '', location_type: '', build_type: '', construction_type: '',
     total_budget: '', start_date: '', target_end_date: '', plot_size: '',
     house_size: '', has_basement: false, finish_level: '',
   })
@@ -79,7 +85,7 @@ export default function SettingsPage() {
 
     // Load project
     const { data: proj } = await supabase.from('projects')
-      .select('id,name,address,total_budget,location_type,build_type,start_date,target_end_date,notes,client_id,house_size,has_basement,finish_level')
+      .select('id,name,address,total_budget,location_type,build_type,construction_type,start_date,target_end_date,notes,client_id,house_size,has_basement,finish_level')
       .eq('admin_id', user!.id).order('created_at', { ascending: false }).limit(1).single()
 
     if (proj) {
@@ -89,6 +95,7 @@ export default function SettingsPage() {
         address: proj.address ?? '',
         location_type: proj.location_type ?? '',
         build_type: proj.build_type ?? '',
+        construction_type: proj.construction_type ?? '',
         total_budget: proj.total_budget ? String(proj.total_budget) : '',
         start_date: proj.start_date ?? '',
         target_end_date: proj.target_end_date ?? '',
@@ -136,6 +143,7 @@ export default function SettingsPage() {
       address: projectForm.address || null,
       location_type: projectForm.location_type || null,
       build_type: projectForm.build_type || null,
+      construction_type: projectForm.construction_type || null,
       total_budget: projectForm.total_budget ? parseFloat(projectForm.total_budget.replace(/,/g, '')) : null,
       start_date: projectForm.start_date || null,
       target_end_date: projectForm.target_end_date || null,
@@ -394,6 +402,29 @@ export default function SettingsPage() {
                           <div>
                             <p className={cn('text-sm font-semibold', projectForm.build_type === bt.value ? 'text-indigo-700' : 'text-gray-700')}>{bt.label}</p>
                             <p className="text-xs text-gray-400 mt-0.5">{bt.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Construction type */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">סוג קונסטרוקציה</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {CONSTRUCTION_TYPES.map(ct => (
+                        <button key={ct.value}
+                          onClick={() => setProjectForm(f => ({ ...f, construction_type: f.construction_type === ct.value ? '' : ct.value }))}
+                          className={cn(
+                            'flex items-start gap-3 p-3.5 rounded-xl border-2 text-right transition-all',
+                            projectForm.construction_type === ct.value
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                          )}>
+                          <span className={cn('material-symbols-rounded mt-0.5', projectForm.construction_type === ct.value ? 'text-indigo-600' : 'text-gray-400')} style={{ fontSize: '1.2rem' }}>{ct.icon}</span>
+                          <div>
+                            <p className={cn('text-sm font-semibold', projectForm.construction_type === ct.value ? 'text-indigo-700' : 'text-gray-700')}>{ct.label}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{ct.desc}</p>
                           </div>
                         </button>
                       ))}
