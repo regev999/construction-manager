@@ -179,27 +179,6 @@ function LoginPage() {
             </button>
           </p>
 
-          {/* Dev mode */}
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <p className="text-center text-xs text-gray-300 mb-3">מצב פיתוח — כניסה מהירה</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => { setDevRole('admin'); window.location.href = '/dashboard' }}
-                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-medium transition-colors border"
-                style={{ borderColor: `${PRIMARY}30`, color: PRIMARY, backgroundColor: `${PRIMARY}06` }}
-              >
-                <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>manage_accounts</span>
-                כנס כאדמין
-              </button>
-              <button
-                onClick={() => { setDevRole('client'); window.location.href = '/dashboard' }}
-                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-medium transition-colors border border-emerald-200 text-emerald-700 bg-emerald-50"
-              >
-                <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>person</span>
-                כנס כלקוח
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
