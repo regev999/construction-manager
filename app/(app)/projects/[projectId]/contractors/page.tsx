@@ -140,6 +140,7 @@ export default function ContractorsPage({ params }: { params: { projectId: strin
   const [preChecks, setPreChecks] = useState({ work_done: false, work_inspected: false, no_overruns: false })
   const [uploading, setUploading] = useState<string | null>(null)
   const [addPaymentForm, setAddPaymentForm] = useState<{ contractorId: string; label: string; amount: string; due_date: string; vat_included: boolean } | null>(null)
+  const [extraModal, setExtraModal] = useState<{ contractor: Contractor; description: string; amount: string } | null>(null)
   const paymentReceiptRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { load() }, [projectId])
@@ -322,19 +323,19 @@ export default function ContractorsPage({ params }: { params: { projectId: strin
   }
 
   /* ── Extras ── */
-  async function addExtra(contractor: Contractor) {
-    const description = prompt('תיאור התוספת')
-    const amtStr = prompt('סכום (₪) - השאר ריק אם לא ידוע')
-    if (!description) return
+  async function submitExtra() {
+    if (!extraModal || !extraModal.description.trim()) return
+    const { contractor, description, amount: amtStr } = extraModal
     const amount = amtStr ? parseFloat(amtStr) : null
     const { data, error } = await supabase.from('contractor_extras').insert({
       contractor_id: contractor.id, project_id: projectId,
-      description, amount: isNaN(amount as number) ? null : amount,
+      description, amount: (amount && !isNaN(amount)) ? amount : null,
     }).select().single()
     if (error) { toast.error('שגיאה'); return }
     setContractors(p => p.map(c => c.id === contractor.id
       ? { ...c, extras: [...(c.extras ?? []), data] }
       : c))
+    setExtraModal(null)
     toast.success('תוספת נוספה!')
   }
 
@@ -364,6 +365,57 @@ export default function ContractorsPage({ params }: { params: { projectId: strin
   /* ─── Render ──────────────────────────────────────────────── */
   return (
     <div className="space-y-5 animate-fade-in">
+
+      {/* Extra Modal */}
+      {extraModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                <span className="material-symbols-rounded text-orange-600">add_circle</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">הוספת תוספת עבודה</h3>
+                <p className="text-xs text-gray-400">{extraModal.contractor.name}</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 block mb-1">תיאור התוספת *</label>
+                <input
+                  autoFocus
+                  value={extraModal.description}
+                  onChange={e => setExtraModal(m => m ? { ...m, description: e.target.value } : null)}
+                  placeholder="למשל: שינוי בפתח חלון"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 block mb-1">סכום (₪) — השאר ריק אם לא ידוע</label>
+                <input
+                  type="number"
+                  value={extraModal.amount}
+                  onChange={e => setExtraModal(m => m ? { ...m, amount: e.target.value } : null)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setExtraModal(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
+                ביטול
+              </button>
+              <button
+                onClick={submitExtra}
+                disabled={!extraModal.description.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40"
+              >
+                הוסף
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -883,7 +935,7 @@ export default function ContractorsPage({ params }: { params: { projectId: strin
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-semibold text-gray-700">תוספות</p>
-                            <button onClick={() => addExtra(c)}
+                            <button onClick={() => setExtraModal({ contractor: c, description: '', amount: '' })}
                               className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800">
                               <span className="material-symbols-rounded" style={{ fontSize: '0.9rem' }}>add</span>
                               הוסף תוספת

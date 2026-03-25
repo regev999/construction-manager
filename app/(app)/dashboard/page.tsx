@@ -38,7 +38,11 @@ export default function DashboardPage() {
         ? supabase.from('projects').select('*').eq('admin_id', user!.id).order('created_at', { ascending: false })
         : supabase.from('projects').select('*').eq('client_id', user!.id).order('created_at', { ascending: false })
       let timedOut = false
-      const timer = setTimeout(() => { timedOut = true; setFetching(false) }, 8000)
+      const timer = setTimeout(() => {
+        timedOut = true
+        setFetching(false)
+        toast.error('הטעינה לקחה יותר מדי זמן — בדוק את החיבור לאינטרנט')
+      }, 8000)
       const { data: projectsData } = await query
       clearTimeout(timer)
       if (timedOut) return
@@ -66,7 +70,16 @@ export default function DashboardPage() {
       const justFinished = typeof window !== 'undefined' && sessionStorage.getItem('bm_onboarding_done') === '1'
       if (justFinished) { sessionStorage.removeItem('bm_onboarding_done'); return <EmptyDashboard role={role} /> }
       router.replace('/onboarding')
-      return <LoadingSkeleton />
+      return (
+        <div className="fixed inset-0 z-50 bg-white flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#002045] flex items-center justify-center">
+              <span className="material-symbols-rounded text-white filled" style={{ fontSize: '1.4rem' }}>home_work</span>
+            </div>
+            <div className="w-6 h-6 border-2 border-[#002045] border-t-transparent rounded-full animate-spin" />
+          </div>
+        </div>
+      )
     }
     return <EmptyDashboard role={role} />
   }
