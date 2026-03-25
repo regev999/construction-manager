@@ -13,6 +13,7 @@ type OwnershipType = 'private' | 'rma'
 type CurrentStage = 'searching_land' | 'have_land' | 'getting_permit' | 'have_permit' | 'in_construction' | 'finishing'
 type BuildType = 'self' | 'turnkey'
 type FinishLevel = 'basic' | 'standard' | 'high'
+type ConstructionType = 'concrete' | 'light'
 
 interface OnboardingData {
   projectName: string
@@ -20,6 +21,7 @@ interface OnboardingData {
   locationType: LocationType | null
   ownershipType: OwnershipType | null
   buildType: BuildType | null
+  constructionType: ConstructionType | null
   currentStage: CurrentStage | null
   totalBudget: string
   plotSize: string
@@ -52,7 +54,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [data, setData] = useState<OnboardingData>({
     projectName: '', address: '', locationType: null,
-    ownershipType: null, buildType: null, currentStage: null,
+    ownershipType: null, buildType: null, constructionType: null, currentStage: null,
     totalBudget: '', plotSize: '',
     houseSize: '', hasBasement: false, finishLevel: null,
   })
@@ -96,6 +98,7 @@ export default function OnboardingPage() {
           address: data.address || null,
           location_type: data.locationType,
           build_type: data.buildType,
+          construction_type: data.constructionType || null,
           total_budget: budget,
           status: 'active',
           house_size: data.houseSize ? parseFloat(data.houseSize) : null,
@@ -184,6 +187,7 @@ export default function OnboardingPage() {
               projectName={data.projectName}
               address={data.address}
               buildType={data.buildType}
+              constructionType={data.constructionType}
               totalBudget={data.totalBudget}
               houseSize={data.houseSize}
               hasBasement={data.hasBasement}
@@ -191,6 +195,7 @@ export default function OnboardingPage() {
               onChange={(f, v) => setData(d => ({ ...d, [f]: v }))}
               onChangeHasBasement={v => setData(d => ({ ...d, hasBasement: v }))}
               onChangeFinishLevel={v => setData(d => ({ ...d, finishLevel: v }))}
+              onChangeConstructionType={v => setData(d => ({ ...d, constructionType: v }))}
               onNext={() => setStep(5)}
               onBack={() => setStep(3)}
             />
@@ -538,15 +543,16 @@ function StepCurrentStage({ value, onChange, onNext, onBack }: {
 
 // ─── Step 4: Project details ──────────────────────────────────────────────────
 function StepProjectDetails({
-  projectName, address, buildType, totalBudget,
+  projectName, address, buildType, constructionType, totalBudget,
   houseSize, hasBasement, finishLevel,
-  onChange, onChangeHasBasement, onChangeFinishLevel, onNext, onBack,
+  onChange, onChangeHasBasement, onChangeFinishLevel, onChangeConstructionType, onNext, onBack,
 }: {
-  projectName: string; address: string; buildType: BuildType | null; totalBudget: string
+  projectName: string; address: string; buildType: BuildType | null; constructionType: ConstructionType | null; totalBudget: string
   houseSize: string; hasBasement: boolean; finishLevel: FinishLevel | null
   onChange: (f: string, v: string) => void
   onChangeHasBasement: (v: boolean) => void
   onChangeFinishLevel: (v: FinishLevel | null) => void
+  onChangeConstructionType: (v: ConstructionType | null) => void
   onNext: () => void; onBack: () => void
 }) {
   function handleBudgetChange(raw: string) {
@@ -591,6 +597,28 @@ function StepProjectDetails({
                 <span className="material-symbols-rounded flex-shrink-0" style={{ fontSize: '1.1rem', color: buildType === val ? PRIMARY : '#d1d5db' }}>{icon}</span>
                 <div>
                   <p className="text-xs font-semibold" style={{ color: buildType === val ? PRIMARY : '#374151' }}>{label}</p>
+                  <p className="text-xs text-gray-400">{sub}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* סוג קונסטרוקציה */}
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-1.5">סוג קונסטרוקציה</p>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['concrete', 'foundation', 'בנייה רגילה', 'בטון ובלוקים'],
+              ['light',    'home_storage', 'בנייה קלה', 'פלדה / עץ / מודולרי'],
+            ] as const).map(([val, icon, label, sub]) => (
+              <button key={val} onClick={() => onChangeConstructionType(constructionType === val ? null : val)}
+                className={cn('flex items-center gap-2.5 px-3 py-3 rounded-xl border text-right transition-all',
+                  constructionType === val ? '' : 'border-gray-150 bg-gray-50/50 hover:border-gray-200')}
+                style={constructionType === val ? { borderColor: `${PRIMARY}35`, backgroundColor: `${PRIMARY}07` } : {}}>
+                <span className="material-symbols-rounded flex-shrink-0" style={{ fontSize: '1.1rem', color: constructionType === val ? PRIMARY : '#d1d5db' }}>{icon}</span>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: constructionType === val ? PRIMARY : '#374151' }}>{label}</p>
                   <p className="text-xs text-gray-400">{sub}</p>
                 </div>
               </button>
