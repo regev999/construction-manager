@@ -88,6 +88,29 @@ export default function BudgetPage({ params }: { params: { projectId: string } }
   const usedPct     = totalBudget > 0 ? Math.min(Math.round((totalActual / totalBudget) * 100), 100) : 0
   const isOver      = totalActual > totalBudget && totalBudget > 0
 
+  // ── Cost per sqm calculations ──
+  const totalBuiltSqm = project?.house_size
+    ? project.house_size + (project.basement_size
+        ?? (project.has_basement ? Math.round(project.house_size * 0.5) : 0))
+    : null
+  const aboveGroundSqm  = project?.house_size ?? null
+  const basementSqmCalc = project?.has_basement
+    ? (project.basement_size ?? (project.house_size ? Math.round(project.house_size * 0.5) : 0))
+    : 0
+
+  const actualCostPerSqm = totalBuiltSqm && totalActual > 0
+    ? Math.round(totalActual / totalBuiltSqm) : null
+  const budgetPerSqm = totalBuiltSqm && totalBudget > 0
+    ? Math.round(totalBudget / totalBuiltSqm) : null
+  const marketCostPerSqm = totalBuiltSqm && marketRange
+    ? { min: Math.round(marketRange.min / totalBuiltSqm), max: Math.round(marketRange.max / totalBuiltSqm) }
+    : null
+
+  // השוואה לאומדן שוק
+  const vsMarket = actualCostPerSqm && marketCostPerSqm
+    ? actualCostPerSqm - marketCostPerSqm.min
+    : null
+
   // BudgetReality colors
   const realityColors = {
     unrealistic: { bg: 'bg-red-50', border: 'border-red-200', icon: 'savings', iconColor: 'text-red-500', badge: 'bg-red-100 text-red-700', title: 'text-red-800' },
@@ -246,6 +269,82 @@ export default function BudgetPage({ params }: { params: { projectId: string } }
           </p>
         </div>
       </div>
+
+      {/* ── Cost per sqm card ── */}
+      {totalBuiltSqm && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="material-symbols-rounded text-indigo-500" style={{ fontSize: '1.2rem' }}>straighten</span>
+            <h3 className="font-bold text-gray-900 text-sm">עלות למ"ר בנייה</h3>
+            <span className="mr-auto text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
+              {totalBuiltSqm} מ"ר סה"כ
+              {aboveGroundSqm && basementSqmCalc > 0 && (
+                <span className="text-gray-300 mr-1">
+                  ({aboveGroundSqm} מעל קרקע + {basementSqmCalc} מרתף)
+                </span>
+              )}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* בפועל */}
+            <div className="text-center bg-gray-50 rounded-xl p-4">
+              <p className="text-xs text-gray-400 font-medium mb-1">בפועל</p>
+              {actualCostPerSqm ? (
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatNIS(actualCostPerSqm)}
+                  <span className="text-sm font-normal text-gray-400 mr-1">/ מ"ר</span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-300 mt-1">הזן עלויות בפועל במשימות</p>
+              )}
+            </div>
+
+            {/* תקציב מקורי */}
+            <div className="text-center bg-gray-50 rounded-xl p-4">
+              <p className="text-xs text-gray-400 font-medium mb-1">תקציב מקורי</p>
+              {budgetPerSqm ? (
+                <p className="text-2xl font-bold text-gray-700">
+                  {formatNIS(budgetPerSqm)}
+                  <span className="text-sm font-normal text-gray-400 mr-1">/ מ"ר</span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-300 mt-1">לא הוגדר תקציב</p>
+              )}
+            </div>
+
+            {/* אומדן שוק */}
+            <div className="text-center bg-gray-50 rounded-xl p-4">
+              <p className="text-xs text-gray-400 font-medium mb-1">אומדן שוק</p>
+              {marketCostPerSqm ? (
+                <p className="text-base font-bold text-gray-700 mt-1">
+                  {formatNIS(marketCostPerSqm.min)} – {formatNIS(marketCostPerSqm.max)}
+                  <span className="text-xs font-normal text-gray-400 block mt-0.5">למ"ר</span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-300 mt-1">הגדר שטח בנייה</p>
+              )}
+            </div>
+          </div>
+
+          {/* השוואה */}
+          {actualCostPerSqm && marketCostPerSqm && (
+            <div className={cn(
+              'mt-4 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium',
+              vsMarket !== null && vsMarket <= 0
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                : 'bg-amber-50 text-amber-700 border border-amber-100'
+            )}>
+              <span className="material-symbols-rounded filled" style={{ fontSize: '1rem' }}>
+                {vsMarket !== null && vsMarket <= 0 ? 'thumb_up' : 'info'}
+              </span>
+              {vsMarket !== null && vsMarket <= 0
+                ? `חסכת ${formatNIS(Math.abs(vsMarket))} למ"ר מאומדן השוק המינימלי`
+                : `עלות גבוהה ב-${formatNIS(vsMarket ?? 0)} למ"ר מאומדן השוק המינימלי`}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Stages Breakdown ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
