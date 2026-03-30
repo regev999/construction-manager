@@ -84,8 +84,12 @@ export function calculatePrices(params: ProjectPriceParams): AdjustedItem[] {
       const ctFinishMult = isLight ? LIGHT_FINISH_MULT : 1.0
       min = Math.round(item.base_min * sizeMult * finishMult * ctFinishMult)
       max = Math.round(item.base_max * sizeMult * finishMult * ctFinishMult)
+    } else if ((item.category === 'electrical' || item.category === 'plumbing') && isLight) {
+      // פלדה עבת דופן: חשמל ואינסטלציה כלולים במחיר הכולל — מופחתים יחד עם הגמר
+      min = Math.round(item.base_min * sizeMult * LIGHT_FINISH_MULT)
+      max = Math.round(item.base_max * sizeMult * LIGHT_FINISH_MULT)
     } else {
-      // planning, electrical, plumbing — זהה בכל שיטת בנייה
+      // planning, electrical (concrete/midtec), plumbing (concrete/midtec)
       min = Math.round(item.base_min * sizeMult)
       max = Math.round(item.base_max * sizeMult)
     }
