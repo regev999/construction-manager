@@ -23,7 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 // Maps stage DB names → price phase keys (used for estimate lookup + cost sync)
-export const STAGE_TO_PHASE: Record<string, string> = {
+const STAGE_TO_PHASE: Record<string, string> = {
   'קרקע':       'קרקע',
   'היתר בנייה': 'היתר',
   'שלד':        'שלד',
