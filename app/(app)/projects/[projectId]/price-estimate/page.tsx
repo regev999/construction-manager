@@ -278,14 +278,28 @@ export default function PriceEstimatePage() {
         <div className="flex flex-wrap gap-2 mb-5">
           {project.house_size && (
             <span className="flex items-center gap-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-3 py-1">
-              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>straighten</span>
-              {project.house_size} מ"ר
+              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>home</span>
+              {project.house_size} מ"ר מעל קרקע
             </span>
           )}
           {project.has_basement && (
             <span className="flex items-center gap-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full px-3 py-1">
               <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>domain</span>
-              כולל מרתף
+              {project.basement_size
+                ? `מרתף ${project.basement_size} מ"ר`
+                : 'כולל מרתף'}
+            </span>
+          )}
+          {project.house_size && project.has_basement && (
+            <span className="flex items-center gap-1.5 text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200 rounded-full px-3 py-1">
+              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>straighten</span>
+              {project.house_size + (project.basement_size ?? Math.round(project.house_size * 0.5))} מ"ר סה"כ
+            </span>
+          )}
+          {!project.has_basement && project.house_size && (
+            <span className="flex items-center gap-1.5 text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200 rounded-full px-3 py-1">
+              <span className="material-symbols-rounded" style={{ fontSize: '0.85rem' }}>straighten</span>
+              {project.house_size} מ"ר סה"כ
             </span>
           )}
           {project.finish_level && (
