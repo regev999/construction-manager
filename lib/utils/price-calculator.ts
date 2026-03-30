@@ -34,6 +34,10 @@ const LIGHT_STRUCTURE_MAX = 3000
 const MIDTEC_STRUCTURE_MIN = 3500
 const MIDTEC_STRUCTURE_MAX = 5500
 
+// פלדה עבת דופן: גמר בסיסי הרבה יותר מבטון — מטבח פשוט, ריצוף בסיסי, ללא יוקרה
+// 0.30 מביא את הפרויקט הכולל ל~₪2,500–₪5,000/מ"ר (כולל גמר)
+const LIGHT_FINISH_MULT = 0.30
+
 export function calculatePrices(params: ProjectPriceParams): AdjustedItem[] {
   const { house_size, has_basement, basement_size, finish_level, construction_type } = params
   const isLight  = construction_type === 'light'
@@ -76,10 +80,12 @@ export function calculatePrices(params: ProjectPriceParams): AdjustedItem[] {
       min = item.base_min * basementSqm
       max = item.base_max * basementSqm
     } else if (item.category === 'finish') {
-      min = Math.round(item.base_min * sizeMult * finishMult)
-      max = Math.round(item.base_max * sizeMult * finishMult)
+      // פלדה עבת דופן: גמר בסיסי — מפחיתים ב-LIGHT_FINISH_MULT
+      const ctFinishMult = isLight ? LIGHT_FINISH_MULT : 1.0
+      min = Math.round(item.base_min * sizeMult * finishMult * ctFinishMult)
+      max = Math.round(item.base_max * sizeMult * finishMult * ctFinishMult)
     } else {
-      // planning, electrical, plumbing
+      // planning, electrical, plumbing — זהה בכל שיטת בנייה
       min = Math.round(item.base_min * sizeMult)
       max = Math.round(item.base_max * sizeMult)
     }
@@ -124,10 +130,11 @@ const COST_PER_SQM: Record<string, { min: number; max: number }> = {
 }
 
 // מחיר כולל למ"ר לפי רמת גמר — פלדה עבת דופן, שוק 2025
+// כולל שלד + גמר בסיסי + חשמל + אינסטלציה + תכנון (הכל כולל)
 const COST_PER_SQM_LIGHT: Record<string, { min: number; max: number }> = {
-  basic:    { min: 2500, max: 3500 },
-  standard: { min: 3500, max: 4500 },
-  high:     { min: 4500, max: 6000 },
+  basic:    { min: 2500, max: 4500 },
+  standard: { min: 3500, max: 6000 },
+  high:     { min: 5000, max: 8500 },
 }
 
 // מחיר כולל למ"ר לפי רמת גמר — מידטק / LSF (דומה לבטון), שוק 2025
