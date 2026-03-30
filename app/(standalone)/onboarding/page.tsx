@@ -5,8 +5,16 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { DEFAULT_STAGES, getPersonalizedStages } from '@/lib/data/construction-stages'
+import { calculatePrices } from '@/lib/utils/price-calculator'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+
+const STAGE_TO_PHASE: Record<string, string> = {
+  'קרקע':       'קרקע',
+  'היתר בנייה': 'היתר',
+  'שלד':        'שלד',
+  'גמר':        'גמר',
+}
 
 type LocationType = 'city' | 'moshav' | 'kibbutz' | 'other'
 type OwnershipType = 'private' | 'rma'
@@ -27,6 +35,7 @@ interface OnboardingData {
   plotSize: string
   houseSize: string
   hasBasement: boolean
+  basementSize: string
   finishLevel: FinishLevel | null
 }
 
@@ -56,7 +65,7 @@ export default function OnboardingPage() {
     projectName: '', address: '', locationType: null,
     ownershipType: null, buildType: null, constructionType: null, currentStage: null,
     totalBudget: '', plotSize: '',
-    houseSize: '', hasBasement: false, finishLevel: null,
+    houseSize: '', hasBasement: false, basementSize: '', finishLevel: null,
   })
 
   function set<K extends keyof OnboardingData>(key: K, val: OnboardingData[K]) {
@@ -103,6 +112,7 @@ export default function OnboardingPage() {
           status: 'active',
           house_size: data.houseSize ? parseFloat(data.houseSize) : null,
           has_basement: data.hasBasement,
+          basement_size: data.basementSize ? parseFloat(data.basementSize) : null,
           finish_level: data.finishLevel || null,
           notes: [
             data.ownershipType === 'rma' ? 'קרקע רמ"י' : data.ownershipType === 'private' ? 'קרקע פרטית' : null,
@@ -114,13 +124,29 @@ export default function OnboardingPage() {
 
       if (error || !project) throw error
 
+      // Build price estimate map for calculated planned_costs
+      const house_size = data.houseSize ? parseFloat(data.houseSize) : null
+      const basement_size = data.basementSize ? parseFloat(data.basementSize) : null
+      const priceItems = calculatePrices({ house_size, has_basement: data.hasBasement, basement_size, finish_level: data.finishLevel, construction_type: data.constructionType })
+      const byPhase: Record<string, { min: number; max: number }> = {}
+      for (const item of priceItems) {
+        if (!byPhase[item.phase]) byPhase[item.phase] = { min: 0, max: 0 }
+        byPhase[item.phase].min += item.adjusted_min
+        byPhase[item.phase].max += item.adjusted_max
+      }
+
       const personalizedStages = getPersonalizedStages(data.locationType, data.ownershipType, data.buildType)
       for (let si = 0; si < personalizedStages.length; si++) {
         const sd = personalizedStages[si]
         const status = si < startIdx ? 'completed' : si === startIdx ? 'in_progress' : 'pending'
+        const phase = STAGE_TO_PHASE[sd.name]
+        const range = phase ? byPhase[phase] : null
+        const planned_cost = range && house_size
+          ? Math.round((range.min + range.max) / 2)
+          : sd.planned_cost
         const { data: stage } = await supabase.from('stages').insert({
           project_id: project.id, name: sd.name, sort_order: si,
-          status, planned_cost: sd.planned_cost,
+          status, planned_cost,
         }).select().single()
         if (!stage) continue
         for (let ti = 0; ti < sd.tasks.length; ti++) {
@@ -191,9 +217,10 @@ export default function OnboardingPage() {
               totalBudget={data.totalBudget}
               houseSize={data.houseSize}
               hasBasement={data.hasBasement}
+              basementSize={data.basementSize}
               finishLevel={data.finishLevel}
               onChange={(f, v) => setData(d => ({ ...d, [f]: v }))}
-              onChangeHasBasement={v => setData(d => ({ ...d, hasBasement: v }))}
+              onChangeHasBasement={v => setData(d => ({ ...d, hasBasement: v, basementSize: v ? d.basementSize : '' }))}
               onChangeFinishLevel={v => setData(d => ({ ...d, finishLevel: v }))}
               onChangeConstructionType={v => setData(d => ({ ...d, constructionType: v }))}
               onNext={() => setStep(5)}
@@ -544,11 +571,11 @@ function StepCurrentStage({ value, onChange, onNext, onBack }: {
 // ─── Step 4: Project details ──────────────────────────────────────────────────
 function StepProjectDetails({
   projectName, address, buildType, constructionType, totalBudget,
-  houseSize, hasBasement, finishLevel,
+  houseSize, hasBasement, basementSize, finishLevel,
   onChange, onChangeHasBasement, onChangeFinishLevel, onChangeConstructionType, onNext, onBack,
 }: {
   projectName: string; address: string; buildType: BuildType | null; constructionType: ConstructionType | null; totalBudget: string
-  houseSize: string; hasBasement: boolean; finishLevel: FinishLevel | null
+  houseSize: string; hasBasement: boolean; basementSize: string; finishLevel: FinishLevel | null
   onChange: (f: string, v: string) => void
   onChangeHasBasement: (v: boolean) => void
   onChangeFinishLevel: (v: FinishLevel | null) => void
@@ -673,6 +700,19 @@ function StepProjectDetails({
               </button>
             ))}
           </div>
+          {hasBasement && (
+            <div className="mt-3 relative">
+              <input
+                type="text" inputMode="numeric" value={basementSize}
+                onChange={e => onChange('basementSize', e.target.value.replace(/[^\d]/g, ''))}
+                placeholder="שטח מרתף, למשל 80"
+                className={inputClass + ' pl-10'}
+                onFocus={e => { e.currentTarget.style.borderColor = PRIMARY; e.currentTarget.style.backgroundColor = 'white' }}
+                onBlur={e => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.backgroundColor = '' }}
+              />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">מ"ר</span>
+            </div>
+          )}
         </div>
 
         {/* רמת גמר */}

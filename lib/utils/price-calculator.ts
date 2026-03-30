@@ -3,7 +3,9 @@ import { PRICE_ITEMS, BASEMENT_ITEM, type PriceItem } from '@/lib/data/price-ite
 export interface ProjectPriceParams {
   house_size: number | null
   has_basement: boolean
+  basement_size?: number | null
   finish_level: 'basic' | 'standard' | 'high' | null
+  construction_type?: 'concrete' | 'light' | null
 }
 
 export interface AdjustedItem extends PriceItem {
@@ -19,13 +21,21 @@ function getSizeMultiplier(size: number | null): number {
 }
 
 function getFinishMultiplier(level: string | null): number {
-  if (level === 'basic') return 0.75
-  if (level === 'high') return 1.4
+  if (level === 'basic') return 0.65
+  if (level === 'high') return 1.5
   return 1.0
 }
 
+// מחיר שלד לבנייה קלה (פלדה/עץ/מודולרי) — ₪/מ"ר, קומות על-קרקעיות בלבד
+const LIGHT_STRUCTURE_MIN = 1800
+const LIGHT_STRUCTURE_MAX = 3500
+
 export function calculatePrices(params: ProjectPriceParams): AdjustedItem[] {
-  const { house_size, has_basement, finish_level } = params
+  const { house_size, has_basement, basement_size, finish_level, construction_type } = params
+  const isLight = construction_type === 'light'
+  // house_size = שטח על-קרקעי בלבד. מרתף = שטח שהוגדר ידנית, או fallback ל-50% משטח הבית
+  const basementSqm = basement_size ?? (house_size ? Math.round(house_size * 0.5) : 0)
+
   const sizeMult = getSizeMultiplier(house_size)
   const finishMult = getFinishMultiplier(finish_level)
 
@@ -40,13 +50,21 @@ export function calculatePrices(params: ProjectPriceParams): AdjustedItem[] {
     let max = item.base_max
 
     if (item.id === 'structure' && house_size) {
-      // מ"ר × מחיר למ"ר, +20% אם יש מרתף (מורכבות)
-      const basementMult = has_basement ? 1.2 : 1
-      min = Math.round(item.base_min * house_size * basementMult)
-      max = Math.round(item.base_max * house_size * basementMult)
+      if (isLight) {
+        // בנייה קלה: house_size קומות על-קרקעיות במחיר קל
+        // המרתף (אם יש) נספר בנפרד ב-BASEMENT_ITEM — אין ספירה כפולה
+        // +10% מורכבות אם יש מרתף (תיאום בין שתי שיטות בנייה)
+        const basementComplexityMult = has_basement ? 1.1 : 1
+        min = Math.round(LIGHT_STRUCTURE_MIN * house_size * basementComplexityMult)
+        max = Math.round(LIGHT_STRUCTURE_MAX * house_size * basementComplexityMult)
+      } else {
+        // בנייה רגילה (בטון): כל השטח, +20% אם יש מרתף
+        const basementMult = has_basement ? 1.2 : 1
+        min = Math.round(item.base_min * house_size * basementMult)
+        max = Math.round(item.base_max * house_size * basementMult)
+      }
     } else if (item.id === 'basement' && house_size) {
-      // מרתף: ~50% מהשטח
-      const basementSqm = Math.round(house_size * 0.5)
+      // מרתף תמיד בטון — גם בבנייה קלה. BASEMENT_ITEM הוא המקום היחיד שמחשב את המרתף
       min = item.base_min * basementSqm
       max = item.base_max * basementSqm
     } else if (item.category === 'finish') {
@@ -90,29 +108,43 @@ export interface BudgetRealityResult {
   suggestions: string[]
 }
 
-const COST_PER_SQM_MIN = 7000
-const COST_PER_SQM_MAX = 12000
+// מחיר כולל למ"ר לפי רמת גמר — בנייה רגילה (בטון), שוק 2025
+const COST_PER_SQM: Record<string, { min: number; max: number }> = {
+  basic:    { min: 7000,  max: 9000  },
+  standard: { min: 10000, max: 13000 },
+  high:     { min: 13000, max: 18000 },
+}
 
-const FINISH_MULT: Record<string, { min: number; max: number }> = {
-  basic:    { min: 0.80, max: 0.85 },
-  standard: { min: 1.00, max: 1.00 },
-  high:     { min: 1.15, max: 1.40 },
+// מחיר כולל למ"ר לפי רמת גמר — בנייה קלה (פלדה/עץ), שוק 2025
+const COST_PER_SQM_LIGHT: Record<string, { min: number; max: number }> = {
+  basic:    { min: 5500, max: 7500  },
+  standard: { min: 7500, max: 10000 },
+  high:     { min: 10000, max: 14000 },
 }
 
 export function checkBudgetReality(params: {
   house_size: number | null | undefined
   has_basement: boolean | null | undefined
+  basement_size?: number | null | undefined
   finish_level: 'basic' | 'standard' | 'high' | null | undefined
   total_budget: number | null | undefined
+  construction_type?: 'concrete' | 'light' | null
 }): BudgetRealityResult | null {
-  const { house_size, has_basement, finish_level, total_budget } = params
+  const { house_size, has_basement, basement_size, finish_level, total_budget, construction_type } = params
   if (!house_size || !total_budget) return null
 
-  const fm = FINISH_MULT[finish_level ?? 'standard'] ?? FINISH_MULT.standard
-  const baseMult = has_basement ? 1.2 : 1
+  const isLight = construction_type === 'light'
+  const priceTable = isLight ? COST_PER_SQM_LIGHT : COST_PER_SQM
+  const sqm = priceTable[finish_level ?? 'standard'] ?? priceTable.standard
 
-  const estimated_min = Math.round(house_size * COST_PER_SQM_MIN * fm.min * baseMult)
-  const estimated_max = Math.round(house_size * COST_PER_SQM_MAX * fm.max * baseMult)
+  // חישוב תוספת מרתף לפי שטח ממשי (אם הוגדר) או fallback ל-50%
+  const actualBasementSqm = basement_size ?? (has_basement && house_size ? Math.round(house_size * 0.5) : 0)
+  const baseMult = house_size && actualBasementSqm > 0
+    ? 1 + (actualBasementSqm / house_size) * 0.7
+    : 1
+
+  const estimated_min = Math.round(house_size * sqm.min * baseMult)
+  const estimated_max = Math.round(house_size * sqm.max * baseMult)
 
   let status: BudgetRealityStatus
   if (total_budget < estimated_min) {

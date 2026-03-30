@@ -122,9 +122,10 @@ function daysOverdue(planned: string | null): number {
 export default function ContractorsPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params
   const supabase = createClient()
-  const { vatRate, applyVat } = useVatRate()
 
   const [contractors, setContractors] = useState<Contractor[]>([])
+  const [projectVatRate, setProjectVatRate] = useState<number | null>(null)
+  const { vatRate, applyVat } = useVatRate(projectVatRate)
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Record<string, string>>({})
@@ -146,12 +147,12 @@ export default function ContractorsPage({ params }: { params: { projectId: strin
   useEffect(() => { load() }, [projectId])
 
   async function load() {
-    const { data: ctrs } = await supabase
-      .from('contractors')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at')
+    const [{ data: ctrs }, { data: proj }] = await Promise.all([
+      supabase.from('contractors').select('*').eq('project_id', projectId).order('created_at'),
+      supabase.from('projects').select('vat_rate').eq('id', projectId).single(),
+    ])
 
+    if (proj?.vat_rate != null) setProjectVatRate(proj.vat_rate)
     if (!ctrs) { setLoading(false); return }
 
     const ids = ctrs.map(c => c.id)

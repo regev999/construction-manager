@@ -21,7 +21,10 @@ export interface Project {
   location_type?: LocationType
   house_size?: number
   has_basement?: boolean
+  basement_size?: number
   finish_level?: 'basic' | 'standard' | 'high'
+  construction_type?: 'concrete' | 'light'
+  vat_rate?: number
   created_at: string
   updated_at: string
 }

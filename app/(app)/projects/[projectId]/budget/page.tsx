@@ -16,7 +16,9 @@ interface Project {
   total_budget?: number
   house_size?: number
   has_basement?: boolean
+  basement_size?: number
   finish_level?: 'basic' | 'standard' | 'high'
+  construction_type?: 'concrete' | 'light'
 }
 
 export default function BudgetPage({ params }: { params: { projectId: string } }) {
@@ -30,7 +32,7 @@ export default function BudgetPage({ params }: { params: { projectId: string } }
     async function load() {
       const { data: proj } = await supabase
         .from('projects')
-        .select('name, total_budget, house_size, has_basement, finish_level')
+        .select('name, total_budget, house_size, has_basement, basement_size, finish_level, construction_type')
         .eq('id', projectId)
         .single()
       setProject(proj)
@@ -51,7 +53,9 @@ export default function BudgetPage({ params }: { params: { projectId: string } }
     const items = calculatePrices({
       house_size: project.house_size ?? null,
       has_basement: project.has_basement ?? false,
+      basement_size: project.basement_size ?? null,
       finish_level: project.finish_level ?? null,
+      construction_type: project.construction_type ?? null,
     })
     return getTotalRange(items)
   }, [project])
@@ -62,8 +66,10 @@ export default function BudgetPage({ params }: { params: { projectId: string } }
     return checkBudgetReality({
       house_size: project.house_size ?? null,
       has_basement: project.has_basement ?? false,
+      basement_size: project.basement_size ?? null,
       finish_level: project.finish_level ?? null,
       total_budget: project.total_budget ?? null,
+      construction_type: project.construction_type ?? null,
     })
   }, [project])
 

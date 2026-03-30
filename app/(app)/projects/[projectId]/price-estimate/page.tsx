@@ -36,8 +36,10 @@ interface ProjectData {
   name: string
   house_size: number | null
   has_basement: boolean
+  basement_size?: number | null
   finish_level: 'basic' | 'standard' | 'high' | null
   total_budget: number | null
+  construction_type?: 'concrete' | 'light' | null
 }
 
 function InfoModal({ item, onClose }: { item: AdjustedItem; onClose: () => void }) {
@@ -179,7 +181,7 @@ export default function PriceEstimatePage() {
       const [{ data: proj }, { data: qs }] = await Promise.all([
         supabase
           .from('projects')
-          .select('id, name, house_size, has_basement, finish_level, total_budget')
+          .select('id, name, house_size, has_basement, basement_size, finish_level, total_budget, construction_type')
           .eq('id', projectId)
           .single(),
         supabase
@@ -200,7 +202,9 @@ export default function PriceEstimatePage() {
     return calculatePrices({
       house_size: project.house_size,
       has_basement: project.has_basement ?? false,
+      basement_size: project.basement_size ?? null,
       finish_level: project.finish_level,
+      construction_type: project.construction_type,
     })
   }, [project])
 
@@ -223,8 +227,10 @@ export default function PriceEstimatePage() {
     return checkBudgetReality({
       house_size: project.house_size,
       has_basement: project.has_basement,
+      basement_size: project.basement_size ?? null,
       finish_level: project.finish_level,
       total_budget: project.total_budget,
+      construction_type: project.construction_type,
     })
   }, [project])
 

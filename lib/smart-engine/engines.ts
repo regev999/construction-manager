@@ -257,8 +257,10 @@ export function getSmartAlerts(input: EngineInput): SmartAlert[] {
   const budgetCheck = checkBudgetReality({
     house_size: (project as any).house_size ?? null,
     has_basement: (project as any).has_basement ?? false,
+    basement_size: (project as any).basement_size ?? null,
     finish_level: (project as any).finish_level ?? null,
     total_budget: project.total_budget ?? null,
+    construction_type: (project as any).construction_type ?? null,
   })
 
   if (budgetCheck?.status === 'unrealistic') {

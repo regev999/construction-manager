@@ -22,6 +22,14 @@ const STATUS_LABELS: Record<string, string> = {
   on_hold: 'מושהה',
 }
 
+// Maps stage DB names → price phase keys (used for estimate lookup + cost sync)
+export const STAGE_TO_PHASE: Record<string, string> = {
+  'קרקע':       'קרקע',
+  'היתר בנייה': 'היתר',
+  'שלד':        'שלד',
+  'גמר':        'גמר',
+}
+
 export default function StagesPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params
   const { role } = useAuth()
@@ -38,13 +46,14 @@ export default function StagesPage({ params }: { params: { projectId: string } }
   useEffect(() => { loadStages() }, [projectId])
 
   async function loadStages() {
-    const { data: projectData } = await supabase.from('projects').select('name, location_type, build_type, notes, house_size, has_basement, finish_level').eq('id', projectId).single()
+    const { data: projectData } = await supabase.from('projects').select('name, location_type, build_type, notes, house_size, has_basement, finish_level, construction_type').eq('id', projectId).single()
     if (projectData) {
       setProject(projectData)
       const items = calculatePrices({
         house_size: projectData.house_size ?? null,
         has_basement: projectData.has_basement ?? false,
         finish_level: projectData.finish_level ?? null,
+        construction_type: projectData.construction_type ?? null,
       })
       const byPhase: Record<string, { min: number; max: number }> = {}
       for (const item of items) {
@@ -541,11 +550,14 @@ export default function StagesPage({ params }: { params: { projectId: string } }
                   : `השלמת ${totalProgress}% מהמשימות. ${pendingTasks.length} משימות נותרו לשלב הנוכחי.`
                 }
               </p>
-              {pricesByPhase[activeStage.name] && (
+              {pricesByPhase[STAGE_TO_PHASE[activeStage.name] ?? activeStage.name] && (
                 <div className="mt-3 pt-3 border-t border-white/10">
                   <p className="text-xs text-white/50">אומדן שוק לשלב{project?.house_size ? ` · ${project.house_size} מ"ר` : ''}</p>
                   <p className="text-base font-bold text-white mt-0.5">
-                    {formatRange(pricesByPhase[activeStage.name].min, pricesByPhase[activeStage.name].max)}
+                    {formatRange(
+                      pricesByPhase[STAGE_TO_PHASE[activeStage.name] ?? activeStage.name].min,
+                      pricesByPhase[STAGE_TO_PHASE[activeStage.name] ?? activeStage.name].max
+                    )}
                   </p>
                 </div>
               )}

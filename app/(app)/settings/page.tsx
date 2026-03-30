@@ -6,6 +6,14 @@ import { useVatRate } from '@/lib/hooks/useVatRate'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { calculatePrices } from '@/lib/utils/price-calculator'
+
+const STAGE_TO_PHASE: Record<string, string> = {
+  'קרקע':       'קרקע',
+  'היתר בנייה': 'היתר',
+  'שלד':        'שלד',
+  'גמר':        'גמר',
+}
 
 interface Project {
   id: string
@@ -21,6 +29,7 @@ interface Project {
   client_id: string | null
   house_size: number | null
   has_basement: boolean
+  basement_size: number | null
   finish_level: string | null
 }
 
@@ -49,8 +58,9 @@ function extractPlotSize(notes: string | null): string {
 
 export default function SettingsPage() {
   const { user, role, signOut } = useAuth()
-  const { vatRate, setVatRate } = useVatRate()
   const supabase = createClient()
+  const [projectVatRate, setProjectVatRate] = useState<number | null>(null)
+  const { vatRate, setVatRate } = useVatRate(projectVatRate)
 
   // Profile
   const [profile, setProfile] = useState({ full_name: '', phone: '' })
@@ -61,7 +71,7 @@ export default function SettingsPage() {
   const [projectForm, setProjectForm] = useState({
     name: '', address: '', location_type: '', build_type: '', construction_type: '',
     total_budget: '', start_date: '', target_end_date: '', plot_size: '',
-    house_size: '', has_basement: false, finish_level: '',
+    house_size: '', has_basement: false, basement_size: '', finish_level: '',
   })
   const [savingProject, setSavingProject] = useState(false)
 
@@ -85,11 +95,12 @@ export default function SettingsPage() {
 
     // Load project
     const { data: proj } = await supabase.from('projects')
-      .select('id,name,address,total_budget,location_type,build_type,construction_type,start_date,target_end_date,notes,client_id,house_size,has_basement,finish_level')
+      .select('id,name,address,total_budget,location_type,build_type,construction_type,start_date,target_end_date,notes,client_id,house_size,has_basement,basement_size,finish_level,vat_rate')
       .eq('admin_id', user!.id).order('created_at', { ascending: false }).limit(1).single()
 
     if (proj) {
       setProject(proj)
+      if (proj.vat_rate != null) setProjectVatRate(proj.vat_rate)
       setProjectForm({
         name: proj.name ?? '',
         address: proj.address ?? '',
@@ -102,6 +113,7 @@ export default function SettingsPage() {
         plot_size: extractPlotSize(proj.notes),
         house_size: proj.house_size ? String(proj.house_size) : '',
         has_basement: proj.has_basement ?? false,
+        basement_size: proj.basement_size ? String(proj.basement_size) : '',
         finish_level: proj.finish_level ?? '',
       })
 
@@ -112,6 +124,14 @@ export default function SettingsPage() {
         const { data: clientProfile } = await supabase.from('users').select('id').eq('id', proj.client_id).single()
         if (clientProfile) setCurrentClient({ email: '(מוגדר)' })
       }
+    }
+  }
+
+  async function saveVatRate(rate: number) {
+    setVatRate(rate)
+    setProjectVatRate(rate)
+    if (project) {
+      await supabase.from('projects').update({ vat_rate: rate }).eq('id', project.id)
     }
   }
 
@@ -150,15 +170,38 @@ export default function SettingsPage() {
       notes: noteParts.join(' | ') || null,
       house_size: projectForm.house_size ? parseFloat(projectForm.house_size) : null,
       has_basement: projectForm.has_basement,
+      basement_size: projectForm.basement_size ? parseFloat(projectForm.basement_size) : null,
       finish_level: projectForm.finish_level || null,
     }).eq('id', project.id)
 
     setSavingProject(false)
-    if (error) toast.error('שגיאה בשמירה')
-    else {
-      toast.success('פרטי הפרויקט עודכנו')
-      loadData()
+    if (error) { toast.error('שגיאה בשמירה'); return }
+
+    // Sync stage planned_costs if estimate params changed
+    const house_size = projectForm.house_size ? parseFloat(projectForm.house_size) : null
+    const has_basement = projectForm.has_basement
+    const basement_size = projectForm.basement_size ? parseFloat(projectForm.basement_size) : null
+    const finish_level = projectForm.finish_level || null
+    if (house_size || finish_level) {
+      const items = calculatePrices({ house_size, has_basement, basement_size, finish_level: finish_level as 'basic' | 'standard' | 'high' | null, construction_type: projectForm.construction_type as 'concrete' | 'light' | null || null })
+      const byPhase: Record<string, { min: number; max: number }> = {}
+      for (const item of items) {
+        if (!byPhase[item.phase]) byPhase[item.phase] = { min: 0, max: 0 }
+        byPhase[item.phase].min += item.adjusted_min
+        byPhase[item.phase].max += item.adjusted_max
+      }
+      const { data: stagesData } = await supabase.from('stages').select('id, name').eq('project_id', project.id)
+      for (const stage of stagesData ?? []) {
+        const phase = STAGE_TO_PHASE[stage.name]
+        const range = phase ? byPhase[phase] : null
+        if (!range) continue
+        const midpoint = Math.round((range.min + range.max) / 2)
+        await supabase.from('stages').update({ planned_cost: midpoint }).eq('id', stage.id)
+      }
     }
+
+    toast.success('פרטי הפרויקט עודכנו')
+    loadData()
   }
 
   async function inviteClient() {
@@ -440,7 +483,7 @@ export default function SettingsPage() {
                         [false, 'crop_square', 'אין מרתף'],
                       ] as const).map(([val, icon, label]) => (
                         <button key={String(val)}
-                          onClick={() => setProjectForm(f => ({ ...f, has_basement: val }))}
+                          onClick={() => setProjectForm(f => ({ ...f, has_basement: val, basement_size: val ? f.basement_size : '' }))}
                           className={cn(
                             'flex items-center gap-2.5 p-3 rounded-xl border-2 text-sm font-medium transition-all',
                             projectForm.has_basement === val
@@ -452,6 +495,19 @@ export default function SettingsPage() {
                         </button>
                       ))}
                     </div>
+                    {projectForm.has_basement && (
+                      <div className="mt-3">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">שטח מרתף (מ"ר)</label>
+                        <input
+                          type="number"
+                          value={projectForm.basement_size}
+                          onChange={e => setProjectForm(f => ({ ...f, basement_size: e.target.value }))}
+                          placeholder="למשל 80"
+                          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                          dir="ltr"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* רמת גמר */}
@@ -598,7 +654,7 @@ export default function SettingsPage() {
                   <input
                     type="number" min={0} max={100} step={0.1}
                     value={vatRate}
-                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0 && v <= 100) setVatRate(v) }}
+                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0 && v <= 100) saveVatRate(v) }}
                     className="w-24 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 text-center font-bold"
                     dir="ltr"
                   />
@@ -606,7 +662,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex gap-2">
                   {[17, 18].map(v => (
-                    <button key={v} onClick={() => setVatRate(v)}
+                    <button key={v} onClick={() => saveVatRate(v)}
                       className={cn('px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all', vatRate === v ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-200 text-gray-500 hover:border-indigo-300')}>
                       {v}%
                     </button>

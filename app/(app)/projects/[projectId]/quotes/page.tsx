@@ -55,12 +55,12 @@ const emptyForm: QuoteForm = {
 export default function QuotesPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params
   const { role } = useAuth()
-  const { vatRate, applyVat } = useVatRate()
   const supabase = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [quotes, setQuotes] = useState<Quote[]>([])
-  const [project, setProject] = useState<{ name: string; total_budget?: number } | null>(null)
+  const [project, setProject] = useState<{ name: string; total_budget?: number; vat_rate?: number } | null>(null)
+  const { vatRate, applyVat } = useVatRate(project?.vat_rate)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<QuoteForm>(emptyForm)
@@ -80,7 +80,7 @@ export default function QuotesPage({ params }: { params: { projectId: string } }
 
   async function load() {
     const [{ data: proj }, { data: quotesData }] = await Promise.all([
-      supabase.from('projects').select('name, total_budget').eq('id', projectId).single(),
+      supabase.from('projects').select('name, total_budget, vat_rate').eq('id', projectId).single(),
       supabase.from('quotes').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
     ])
     setProject(proj)
