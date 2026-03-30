@@ -39,7 +39,7 @@ interface ProjectData {
   basement_size?: number | null
   finish_level: 'basic' | 'standard' | 'high' | null
   total_budget: number | null
-  construction_type?: 'concrete' | 'light' | null
+  construction_type?: 'concrete' | 'light' | 'midtec' | null
 }
 
 function InfoModal({ item, onClose }: { item: AdjustedItem; onClose: () => void }) {

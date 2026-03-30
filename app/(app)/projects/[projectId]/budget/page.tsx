@@ -18,7 +18,7 @@ interface Project {
   has_basement?: boolean
   basement_size?: number
   finish_level?: 'basic' | 'standard' | 'high'
-  construction_type?: 'concrete' | 'light'
+  construction_type?: 'concrete' | 'light' | 'midtec'
 }
 
 export default function BudgetPage({ params }: { params: { projectId: string } }) {

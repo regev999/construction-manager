@@ -46,8 +46,9 @@ const BUILD_TYPES = [
 ]
 
 const CONSTRUCTION_TYPES = [
-  { value: 'concrete', label: 'בנייה רגילה', icon: 'foundation',    desc: 'בטון ובלוקים — הסטנדרט הנפוץ', color: 'text-slate-600' },
-  { value: 'light',    label: 'בנייה קלה',   icon: 'home_storage',  desc: 'פלדה / עץ / מודולרי — עלות נמוכה יותר', color: 'text-emerald-600' },
+  { value: 'concrete', label: 'בנייה רגילה (בטון)', icon: 'foundation',   desc: 'בטון ובלוקים — הסטנדרט הנפוץ' },
+  { value: 'light',    label: 'פלדה עבת דופן',      icon: 'home_storage', desc: 'שלד פלדה מבני — עלות נמוכה משמעותית' },
+  { value: 'midtec',   label: 'מידטק / LSF',         icon: 'grid_on',      desc: 'פרופילי פלדה דקים — עלות דומה לבטון' },
 ]
 
 function extractPlotSize(notes: string | null): string {
@@ -183,7 +184,7 @@ export default function SettingsPage() {
     const basement_size = projectForm.basement_size ? parseFloat(projectForm.basement_size) : null
     const finish_level = projectForm.finish_level || null
     if (house_size || finish_level) {
-      const items = calculatePrices({ house_size, has_basement, basement_size, finish_level: finish_level as 'basic' | 'standard' | 'high' | null, construction_type: projectForm.construction_type as 'concrete' | 'light' | null || null })
+      const items = calculatePrices({ house_size, has_basement, basement_size, finish_level: finish_level as 'basic' | 'standard' | 'high' | null, construction_type: projectForm.construction_type as 'concrete' | 'light' | 'midtec' | null || null })
       const byPhase: Record<string, { min: number; max: number }> = {}
       for (const item of items) {
         if (!byPhase[item.phase]) byPhase[item.phase] = { min: 0, max: 0 }
@@ -455,7 +456,7 @@ export default function SettingsPage() {
                   {/* Construction type */}
                   <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">סוג קונסטרוקציה</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2">
                       {CONSTRUCTION_TYPES.map(ct => (
                         <button key={ct.value}
                           onClick={() => setProjectForm(f => ({ ...f, construction_type: f.construction_type === ct.value ? '' : ct.value }))}

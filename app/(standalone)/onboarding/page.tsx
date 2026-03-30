@@ -21,7 +21,7 @@ type OwnershipType = 'private' | 'rma'
 type CurrentStage = 'searching_land' | 'have_land' | 'getting_permit' | 'have_permit' | 'in_construction' | 'finishing'
 type BuildType = 'self' | 'turnkey'
 type FinishLevel = 'basic' | 'standard' | 'high'
-type ConstructionType = 'concrete' | 'light'
+type ConstructionType = 'concrete' | 'light' | 'midtec'
 
 interface OnboardingData {
   projectName: string
@@ -634,10 +634,11 @@ function StepProjectDetails({
         {/* סוג קונסטרוקציה */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1.5">סוג קונסטרוקציה</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {([
-              ['concrete', 'foundation', 'בנייה רגילה', 'בטון ובלוקים'],
-              ['light',    'home_storage', 'בנייה קלה', 'פלדה / עץ / מודולרי'],
+              ['concrete', 'foundation',   'בנייה רגילה (בטון)',  'בטון ובלוקים — הסטנדרט הנפוץ'],
+              ['light',    'home_storage',  'פלדה עבת דופן',       'שלד פלדה מבני — עלות נמוכה משמעותית'],
+              ['midtec',   'grid_on',       'מידטק / LSF',          'פרופילי פלדה דקים — עלות דומה לבטון'],
             ] as const).map(([val, icon, label, sub]) => (
               <button key={val} onClick={() => onChangeConstructionType(constructionType === val ? null : val)}
                 className={cn('flex items-center gap-2.5 px-3 py-3 rounded-xl border text-right transition-all',
