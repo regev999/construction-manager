@@ -670,7 +670,7 @@ function StepProjectDetails({
         {/* שטח בנייה */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            שטח בנייה <span className="text-gray-300 font-normal text-xs">(אופציונלי — לאומדן עלויות)</span>
+            שטח בנייה על-קרקעי <span className="text-gray-300 font-normal text-xs">(אופציונלי — לאומדן עלויות)</span>
           </label>
           <div className="relative">
             <input type="text" inputMode="numeric" value={houseSize}
@@ -681,6 +681,7 @@ function StepProjectDetails({
               onBlur={e => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.backgroundColor = '' }} />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">מ"ר</span>
           </div>
+          <p className="text-xs text-gray-400 mt-1.5">קומות הבית בלבד — לא כולל מרתף</p>
         </div>
 
         {/* מרתף */}
@@ -701,16 +702,19 @@ function StepProjectDetails({
             ))}
           </div>
           {hasBasement && (
-            <div className="mt-3 relative">
-              <input
-                type="text" inputMode="numeric" value={basementSize}
-                onChange={e => onChange('basementSize', e.target.value.replace(/[^\d]/g, ''))}
-                placeholder="שטח מרתף, למשל 80"
-                className={inputClass + ' pl-10'}
-                onFocus={e => { e.currentTarget.style.borderColor = PRIMARY; e.currentTarget.style.backgroundColor = 'white' }}
-                onBlur={e => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.backgroundColor = '' }}
-              />
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">מ"ר</span>
+            <div className="mt-3">
+              <div className="relative">
+                <input
+                  type="text" inputMode="numeric" value={basementSize}
+                  onChange={e => onChange('basementSize', e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="שטח מרתף, למשל 80"
+                  className={inputClass + ' pl-10'}
+                  onFocus={e => { e.currentTarget.style.borderColor = PRIMARY; e.currentTarget.style.backgroundColor = 'white' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = ''; e.currentTarget.style.backgroundColor = '' }}
+                />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">מ"ר</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">שטח תת-קרקעי בלבד — נחשב בנפרד מהבנייה</p>
             </div>
           )}
         </div>

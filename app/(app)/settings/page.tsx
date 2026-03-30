@@ -388,11 +388,12 @@ export default function SettingsPage() {
                         className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" dir="ltr" />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">שטח בנייה (מ"ר)</label>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">שטח בנייה על-קרקעי (מ"ר)</label>
                       <input type="number" value={projectForm.house_size}
                         onChange={e => setProjectForm(f => ({ ...f, house_size: e.target.value }))}
                         placeholder="150"
                         className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" dir="ltr" />
+                      <p className="text-xs text-gray-400 mt-1">קומות הבית בלבד — לא כולל מרתף</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">תאריך התחלה</label>
@@ -506,6 +507,7 @@ export default function SettingsPage() {
                           className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                           dir="ltr"
                         />
+                        <p className="text-xs text-gray-400 mt-1">שטח תת-קרקעי בלבד — נחשב בנפרד מהבנייה</p>
                       </div>
                     )}
                   </div>
