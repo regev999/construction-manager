@@ -29,7 +29,13 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession() instead of getUser() to avoid a network round-trip to
+  // Supabase on every request. getUser() makes an external API call which can
+  // exceed Vercel's middleware timeout (504 MIDDLEWARE_INVOCATION_TIMEOUT).
+  // getSession() reads the session from the cookie locally — sufficient for
+  // redirect logic. Secure data access in pages/actions should use getUser().
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
   const isPublic = isAuthPage
