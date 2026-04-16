@@ -14,7 +14,12 @@ export function middleware(request: NextRequest) {
   // Determine if the user has an active session by checking for the Supabase
   // auth cookie directly — zero network calls, runs instantly in edge middleware.
   // The cookie name is sb-{project-ref}-auth-token (set by @supabase/ssr).
-  const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+  let projectRef: string
+  try {
+    projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+  } catch {
+    return NextResponse.next()
+  }
   const hasSession =
     request.cookies.has(`sb-${projectRef}-auth-token`) ||
     request.cookies.has(`sb-${projectRef}-auth-token.0`) // chunked cookie
@@ -37,5 +42,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
