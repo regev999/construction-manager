@@ -31,7 +31,8 @@ export default function DashboardPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    if (!user) return
+    if (loading) return
+    if (!user) { setFetching(false); return }
     if (user.id === 'dev-user') { setFetching(false); return }
     async function load() {
       const query = role === 'admin'
@@ -61,7 +62,7 @@ export default function DashboardPage() {
       setFetching(false)
     }
     load()
-  }, [user, role])
+  }, [user, role, loading])
 
   if (loading || fetching) return <LoadingSkeleton />
 
